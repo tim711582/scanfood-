@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import type { Additive } from '../types';
+import { getDeductionForCategory } from '../services/geminiService';
 
 interface AdditiveCardProps {
   additive: Additive;
 }
 
-const RiskIcon: React.FC<{ riskLevel: Additive['riskLevel']; className?: string }> = ({ riskLevel, className = "h-5 w-5" }) => {
+type RiskLevel = 'Low' | 'Medium' | 'High';
+
+const RiskIcon: React.FC<{ riskLevel: RiskLevel; className?: string }> = ({ riskLevel, className = "h-5 w-5" }) => {
     switch (riskLevel) {
         case 'Low':
             return (
@@ -30,27 +33,6 @@ const RiskIcon: React.FC<{ riskLevel: Additive['riskLevel']; className?: string 
     }
 }
 
-
-const RiskBadge: React.FC<{ riskLevel: Additive['riskLevel'] }> = ({ riskLevel }) => {
-  const riskStyles = {
-    Low: 'bg-emerald-100 text-emerald-800',
-    Medium: 'bg-yellow-100 text-yellow-800',
-    High: 'bg-red-100 text-red-800',
-  };
-  
-  const riskTranslations: Record<Additive['riskLevel'], string> = {
-    Low: '低風險',
-    Medium: '中風險',
-    High: '高風險',
-  };
-
-  return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full ${riskStyles[riskLevel]}`}>
-      {riskTranslations[riskLevel]}
-    </span>
-  );
-};
-
 export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
   const [isOpen, setIsOpen] = useState(false);
   const detailsId = `additive-details-${additive.name.replace(/\s+/g, '-')}`;
@@ -61,35 +43,32 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
         border: 'border-emerald-200',
         title: 'text-emerald-900',
         icon: 'text-emerald-500',
+        badge: 'bg-emerald-100 text-emerald-800',
     },
     Medium: {
         header: 'bg-yellow-50 hover:bg-yellow-100',
         border: 'border-yellow-200',
         title: 'text-yellow-900',
         icon: 'text-yellow-500',
+        badge: 'bg-yellow-100 text-yellow-800',
     },
     High: {
         header: 'bg-red-50 hover:bg-red-100',
         border: 'border-red-200',
         title: 'text-red-900',
         icon: 'text-red-500',
+        badge: 'bg-red-100 text-red-800',
     },
   };
 
-  const getRiskExplanation = (riskLevel: Additive['riskLevel']): string => {
-    switch (riskLevel) {
-      case 'Low':
-        return "此類添加劑在常規食用量下，通常被認為是安全的，且科學研究未顯示有重大的健康風險。";
-      case 'Medium':
-        return "此類添加劑存在一些爭議或潛在風險，特別是對於敏感族群或長期大量攝取的情況。建議適量食用。";
-      case 'High':
-        return "此類添加劑與多項健康問題有關，或在科學研究中顯示出顯著的負面影響。建議盡量避免攝取。";
-      default:
-        return "";
-    }
+  const getRiskInfo = (category: string): { riskLevel: RiskLevel; style: typeof riskStyles[RiskLevel] } => {
+    const deduction = getDeductionForCategory(category);
+    if (deduction >= 20) return { riskLevel: 'High', style: riskStyles.High };
+    if (deduction >= 10) return { riskLevel: 'Medium', style: riskStyles.Medium };
+    return { riskLevel: 'Low', style: riskStyles.Low };
   };
-
-  const currentStyle = riskStyles[additive.riskLevel];
+  
+  const { riskLevel, style: currentStyle } = getRiskInfo(additive.category);
 
   return (
     <div className={`border ${currentStyle.border} rounded-lg shadow-sm overflow-hidden`}>
@@ -100,11 +79,13 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
         aria-controls={detailsId}
       >
         <div className='flex items-center'>
-            <RiskIcon riskLevel={additive.riskLevel} className={`h-6 w-6 mr-3 ${currentStyle.icon}`} />
+            <RiskIcon riskLevel={riskLevel} className={`h-6 w-6 mr-3 ${currentStyle.icon}`} />
             <span className={`text-base font-semibold ${currentStyle.title}`}>{additive.name}</span>
         </div>
         <div className='flex items-center space-x-3'>
-            <RiskBadge riskLevel={additive.riskLevel} />
+            <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full ${currentStyle.badge}`}>
+              {additive.category}
+            </span>
             <svg
                 className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
                 fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -117,10 +98,6 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
           <div>
             <h4 className="font-semibold text-gray-700 mb-1">描述</h4>
             <p className="text-gray-600">{additive.description}</p>
-          </div>
-           <div>
-            <h4 className="font-semibold text-gray-700 mb-1">說明</h4>
-            <p className="text-gray-600">{getRiskExplanation(additive.riskLevel)}</p>
           </div>
           <div>
             <h4 className="font-semibold text-gray-700 mb-1 flex items-center">

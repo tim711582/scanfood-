@@ -1,18 +1,21 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { AnalysisResult } from '../types';
 import { HealthScore } from './HealthScore';
 import { AdditiveCard } from './AdditiveCard';
 import { BeneficialCard } from './BeneficialCard';
+import { getDeductionForCategory } from '../services/geminiService';
 import confetti from 'canvas-confetti';
 
 interface ResultsScreenProps {
   result: AnalysisResult;
   image: string;
+  imageFile: File;
   onReset: () => void;
 }
 
-export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, image, onReset }) => {
-  
+export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, image, imageFile, onReset }) => {
+  const [isScoreDetailsOpen, setIsScoreDetailsOpen] = useState(false);
+
   useEffect(() => {
     if (result.healthScore === 100) {
       const duration = 3 * 1000;
@@ -36,23 +39,103 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, image, onR
     }
   }, [result.healthScore]);
 
-  const handleLineShare = () => {
-    const shareText = `我用「營養標籤分析器」分析了一項食品，健康分數是 ${result.healthScore} 分！\n\nAI 總結：${result.summary}\n\n你也來試試看吧！`;
-    const encodedText = encodeURIComponent(shareText);
-    const lineUrl = `https://line.me/R/msg/text/?${encodedText}`;
-    window.open(lineUrl, '_blank', 'noopener,noreferrer');
+  const handleShare = async () => {
+    const shareText = `我用「營養標籤分析器」分析了「${result.productName}」，健康分數是 ${result.healthScore} 分！\n\nAI 總結：${result.summary}\n\n你也來試試看吧！`;
+
+    const extension = imageFile.type.split('/')[1] || 'png';
+    const sanitizedProductName = result.productName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5_.-]/g, '_');
+    const newFileName = `營養分析_${sanitizedProductName}.${extension}`;
+    
+    const fileToShare = new File([imageFile], newFileName, {
+      type: imageFile.type,
+      lastModified: imageFile.lastModified,
+    });
+
+    const shareData = {
+      title: `「${result.productName}」的營養分析結果`,
+      text: shareText,
+      files: [fileToShare],
+    };
+    
+    if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+      try {
+        await navigator.share(shareData);
+      } catch (error) {
+        if (error instanceof Error && error.name !== 'AbortError') {
+          console.error('Web Share API 錯誤:', error);
+        }
+      }
+    } else {
+      const encodedText = encodeURIComponent(shareText);
+      const lineUrl = `https://line.me/R/msg/text/?${encodedText}`;
+      window.open(lineUrl, '_blank', 'noopener,noreferrer');
+    }
   };
+
+  const scoreColorClasses: Record<string, string> = {
+    '20': 'text-red-600',
+    '15': 'text-yellow-600',
+    '10': 'text-yellow-600',
+    '5': 'text-emerald-600',
+  }
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-          <img src={image} alt="Scanned nutrition label" className="rounded-lg shadow-md w-full object-contain max-h-60 mx-auto" />
+          <img src={image} alt="Scanned nutrition label" className="rounded-lg shadow-md w-full object-contain max-h-60 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-800">{result.productName}</h2>
       </div>
       
       <div className="p-4 bg-slate-50 rounded-lg">
         <div className="flex flex-col items-center text-center">
             <HealthScore score={result.healthScore} />
             <p className="mt-4 text-base text-gray-700">{result.summary}</p>
+        </div>
+        <div className="mt-4 border-t border-slate-200 pt-3">
+          <button 
+              onClick={() => setIsScoreDetailsOpen(!isScoreDetailsOpen)}
+              className="w-full flex justify-between items-center text-left text-sm font-medium text-gray-600 hover:text-gray-800 focus:outline-none"
+              aria-expanded={isScoreDetailsOpen}
+              aria-controls="score-details"
+          >
+              <span>分數計算詳情</span>
+              <svg
+                  className={`w-5 h-5 transform transition-transform duration-200 ${isScoreDetailsOpen ? 'rotate-180' : ''}`}
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+              </svg>
+          </button>
+          {isScoreDetailsOpen && (
+              <div id="score-details" className="mt-3 text-sm text-gray-600 space-y-1">
+                  <div className="flex justify-between items-center py-1">
+                      <span>基礎分數</span>
+                      <span className="font-semibold text-gray-800">100</span>
+                  </div>
+                  {result.additives.map((additive, index) => {
+                    const deduction = getDeductionForCategory(additive.category);
+                    if (deduction === 0) return null;
+                    const colorClass = scoreColorClasses[deduction.toString()] || 'text-gray-600';
+                    return (
+                       <div key={index} className={`flex justify-between items-center py-1 ${colorClass}`}>
+                           <span>{additive.name} ({additive.category})</span>
+                           <span className="font-semibold">{`-${deduction}`}</span>
+                       </div>
+                    )
+                  })}
+
+                  {result.beneficials.length > 0 && (
+                      <div className="flex justify-between items-center py-1 text-green-600">
+                          <span>有益成分 ({result.beneficials.length} 項)</span>
+                          <span className="font-semibold">{`+${result.beneficials.length * 5}`}</span>
+                      </div>
+                  )}
+                  <div className="border-t border-slate-200 !mt-2 pt-2"></div>
+                  <div className="flex justify-between text-base font-bold text-gray-900">
+                      <span>最終分數</span>
+                      <span>{result.healthScore}</span>
+                  </div>
+              </div>
+          )}
         </div>
       </div>
       
@@ -125,13 +208,13 @@ export const ResultsScreen: React.FC<ResultsScreenProps> = ({ result, image, onR
             掃描其他產品
           </button>
           <button
-            onClick={handleLineShare}
+            onClick={handleShare}
             className="w-full inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
           >
-              <svg className="w-5 h-5 mr-2 text-[#06C755]" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M20.2,3.8C19,2.6,17.4,2,15.7,2H8.3C4.8,2,2,4.8,2,8.3v7.4c0,3.5,2.8,6.3,6.3,6.3h1.8c0.2,0,0.4,0.1,0.5,0.2l2.3,2 c0.3,0.3,0.8,0.3,1.1,0l2.3-2c0.1-0.1,0.3-0.2,0.5-0.2h1.8c3.5,0,6.3-2.8,6.3-6.3V8.3C22,6.6,21.4,5,20.2,3.8z M8,13.5 c-0.6,0-1-0.4-1-1v-3c0-0.6,0.4-1,1-1s1,0.4,1,1v3C9,13.1,8.6,13.5,8,13.5z M12,13.5c-0.6,0-1-0.4-1-1v-3c0-0.6,0.4-1,1-1 s1,0.4,1,1v3C13,13.1,12.6,13.5,12,13.5z M16,13.5c-0.6,0-1-0.4-1-1v-3c0-0.6,0.4-1,1-1s1,0.4,1,1v3C17,13.1,16.6,13.5,16,13.5 z"></path>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
               </svg>
-              用 LINE 分享
+              分享結果
           </button>
       </div>
     </div>

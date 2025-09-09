@@ -12,10 +12,12 @@ const App: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
 
   const handleImageAnalysis = useCallback(async (file: File) => {
     setAppState('loading');
     setUploadedImage(URL.createObjectURL(file));
+    setImageFile(file);
     setError(null);
     setAnalysisResult(null);
 
@@ -52,6 +54,7 @@ const App: React.FC = () => {
         URL.revokeObjectURL(uploadedImage);
         setUploadedImage(null);
     }
+    setImageFile(null);
   }, [uploadedImage]);
   
   const renderContent = () => {
@@ -59,7 +62,7 @@ const App: React.FC = () => {
       case 'loading':
         return <LoadingScreen />;
       case 'results':
-        return analysisResult && uploadedImage && <ResultsScreen result={analysisResult} image={uploadedImage} onReset={handleReset} />;
+        return analysisResult && uploadedImage && imageFile && <ResultsScreen result={analysisResult} image={uploadedImage} imageFile={imageFile} onReset={handleReset} />;
       case 'error':
         return <ErrorScreen message={error || "發生了意外的錯誤。"} onReset={handleReset} />;
       case 'welcome':

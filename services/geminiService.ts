@@ -10,9 +10,9 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const responseSchema = {
     type: Type.OBJECT,
     properties: {
-        healthScore: {
-            type: Type.INTEGER,
-            description: "產品的整體健康評分，從 0 到 100。根據詳細的計分規則計算得出。"
+        productName: {
+            type: Type.STRING,
+            description: "從圖片中識別出的產品完整中文名稱，例如'純濃燕麥'。"
         },
         summary: {
             type: Type.STRING,
@@ -28,9 +28,9 @@ const responseSchema = {
                         type: Type.STRING,
                         description: "添加劑的名稱，例如'阿斯巴甜'。"
                     },
-                    riskLevel: {
+                    category: {
                         type: Type.STRING,
-                        description: "添加劑的風險分類：'Low' (低風險), 'Medium' (中風險), 或 'High' (高風險)。"
+                        description: "添加劑的分類，例如：'人工甜味劑', '人工色素', '防腐劑', '人工香料', '乳化劑', '濃稠劑', '安定劑'。"
                     },
                     description: {
                         type: Type.STRING,
@@ -41,7 +41,7 @@ const responseSchema = {
                         description: "與該添加劑相關的潛在健康危害摘要。"
                     }
                 },
-                required: ["name", "riskLevel", "description", "potentialHarm"]
+                required: ["name", "category", "description", "potentialHarm"]
             }
         },
         beneficials: {
@@ -67,37 +67,69 @@ const responseSchema = {
             }
         }
     },
-    required: ["healthScore", "summary", "additives", "beneficials"]
+    required: ["productName", "summary", "additives", "beneficials"]
 };
 
 
-const prompt = `您是一位專門研究食品科學和營養學的 AI 專家。請分析附加的食品營養標籤圖片中的成分列表。
+const prompt = `您是一位專業的食品添加劑健康風險分析師。請分析附加的食品營養標籤圖片。
 
 您的任務是：
 
-1.  **識別添加劑**：仔細閱讀成分列表，識別所有食品添加劑，如防腐劑、人工色素、甜味劑、乳化劑等。根據其潛在風險，將其分類為 'Low'、'Medium' 或 'High' 風險。請忽略天然、無害或有益的成分（如維生素、礦物質）。對於每一個識別出的添加劑，請提供：
+1.  **識別產品名稱 (productName)**：從圖片中找出產品的完整中文名稱。
+
+2.  **識別與分類添加劑 (additives)**：仔細閱讀成分列表，識別所有食品添加劑。請根據以下分類標準嚴格對每個添加劑進行分類 (category)：
+    *   '人工甜味劑' (例如：阿斯巴甜、糖精、蔗糖素)
+    *   '人工色素' (例如：紅色6號、黃色4號、藍色1號)
+    *   '防腐劑' (例如：苯甲酸、山梨酸、亞硝酸鹽)
+    *   '人工香料' (例如：香草香精、香精油)
+    *   '乳化劑'
+    *   '濃稠劑' (例如：羧甲基纖維素)
+    *   '安定劑' (例如：阿拉伯膠)
+    如果一個添加劑不屬於以上任何一類，請不要將其包含在添加劑列表中。
+    對於每一個識別出的添加劑，請提供：
     *   \`name\`: 添加劑的中文名稱。
-    *   \`riskLevel\`: 'Low'、'Medium' 或 'High'。
+    *   \`category\`: 上述分類中的一個。
     *   \`description\`: 該添加劑的簡要描述。
-    *   \`potentialHarm\`: 該添加劑的**潛在危害**。
+    *   \`potentialHarm\`: 該添加劑的潛在危害。
 
-2.  **識別有益成分**：從成分列表中找出對健康有益的成分，例如維生素（維生素C、維生素D）、礦物質（鈣、鐵）、膳食纖維、蛋白質、健康的脂肪（如 Omega-3）等。對於每一個識別出的有益成分，請提供：
-    *   \`name\`: 有益成分的中文名稱。
-    *   \`description\`: 該成分的簡要描述。
-    *   \`benefits\`: 該成分對健康的**具體益處**。
+3.  **識別有益成分 (beneficials)**：找出對健康有益的成分，例如維生素、礦物質、膳食纖維等。
 
-3.  **計算健康分數 (healthScore)**：請嚴格遵守以下計分規則：
-    *   **起始分數為 100 分。**
-    *   每發現一個 **'Low'** 風險添加劑，**減 5 分**。
-    *   每發現一個 **'Medium'** 風險添加劑，**減 15 分**。
-    *   每發現一個 **'High'** 風險添加劑，**減 30 分**。
-    *   每發現一個 **有益** 成分，**加 5 分**。
-    *   **最終分數範圍必須在 0 到 100 之間**。如果計算結果低於 0，則設為 0；如果高於 100，則設為 100。
-    *   如果沒有發現任何添加劑或有益成分，**健康分數必須是 100 分**。
+4.  **生成總結 (summary)**：提供一個簡潔的中文總結，概括您發現的主要添加劑類別。
 
-4.  **生成總結 (summary)**：提供一個簡潔的（一至兩句話）中文總結，概括您發現的主要添加劑（如果有的話）以及任何顯著的有益成分，並給出產品的整體評價。
+請僅以嚴格遵守所提供 schema 的有效 JSON 物件回應。您的回應必須包含 \`productName\`、\`summary\`、\`additives\` (即使為空陣列) 和 \`beneficials\` (即使為空陣列) 這些鍵。請勿在 JSON 物件之外包含任何文字、反引號或解釋。請務必以繁體中文回答所有文字內容。`;
 
-請僅以嚴格遵守所提供 schema 的有效 JSON 物件回應。您的回應必須包含 \`healthScore\`、\`summary\`、\`additives\` (即使為空陣列) 和 \`beneficials\` (即使為空陣列) 這些鍵。請勿在 JSON 物件之外包含任何文字、反引號或解釋。請務必以繁體中文回答所有文字內容。`;
+export const getDeductionForCategory = (category: string): number => {
+    switch (category) {
+        case '人工甜味劑':
+            return 20;
+        case '人工色素':
+        case '防腐劑':
+            return 15;
+        case '人工香料':
+            return 10;
+        case '乳化劑':
+        case '濃稠劑':
+        case '安定劑':
+            return 5;
+        default:
+            return 0;
+    }
+};
+
+const calculateHealthScore = (additives: AnalysisResult['additives'], beneficials: AnalysisResult['beneficials']): number => {
+    let score = 100;
+
+    additives.forEach(additive => {
+        score -= getDeductionForCategory(additive.category);
+    });
+
+    beneficials.forEach(() => {
+        score += 5;
+    });
+
+    return Math.max(0, Math.min(100, score));
+};
+
 
 export const analyzeNutritionLabel = async (imageBase64: string, mimeType: string): Promise<AnalysisResult> => {
     try {
@@ -121,14 +153,15 @@ export const analyzeNutritionLabel = async (imageBase64: string, mimeType: strin
         });
 
         const jsonText = response.text.trim();
-        const result = JSON.parse(jsonText);
+        const apiResult = JSON.parse(jsonText);
 
-        // Basic validation
-        if (result.healthScore === undefined || !result.summary || !Array.isArray(result.additives) || !Array.isArray(result.beneficials)) {
+        if (!apiResult.productName || !apiResult.summary || !Array.isArray(apiResult.additives) || !Array.isArray(apiResult.beneficials)) {
             throw new Error("來自 API 的回應格式無效。");
         }
         
-        return result as AnalysisResult;
+        const healthScore = calculateHealthScore(apiResult.additives, apiResult.beneficials);
+        
+        return { ...apiResult, healthScore } as AnalysisResult;
 
     } catch (error) {
         console.error("Error calling Gemini API:", error);
