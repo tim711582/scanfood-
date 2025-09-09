@@ -1,0 +1,7 @@
+{
+  "name": "營養標籤掃雷",
+  "description": "一款使用 AI 分析食品營養標籤照片的應用程式。它能識別添加劑、解釋其潛在的健康風險，並為產品提供整體健康評分。",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
