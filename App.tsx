@@ -69,23 +69,23 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans antialiased">
-      <header className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center space-x-3">
-             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-emerald-500" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+    <div className="min-h-screen bg-slate-100 font-sans antialiased">
+      <header className="bg-white sticky top-0 z-10 shadow-sm">
+        <div className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-3">
+          <div className="flex items-center justify-center space-x-2">
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h1 className="text-2xl font-bold text-gray-800">營養標籤分析器</h1>
+            <h1 className="text-xl font-bold text-gray-800">營養標籤分析器</h1>
           </div>
         </div>
       </header>
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg transition-all duration-300">
+      <main className="max-w-md mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="bg-white p-5 sm:p-6 rounded-xl shadow-md transition-all duration-300">
            {renderContent()}
         </div>
       </main>
-      <footer className="text-center py-4 text-gray-500 text-sm">
+      <footer className="text-center py-4 text-gray-500 text-xs px-4">
         <p>由 AI 驅動。醫療建議請務必諮詢專業醫療人員。</p>
       </footer>
     </div>

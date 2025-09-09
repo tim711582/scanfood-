@@ -12,40 +12,41 @@ export const HealthScore: React.FC<HealthScoreProps> = ({ score }) => {
     return 'text-red-500';
   };
 
-  const circumference = 2 * Math.PI * 45;
+  const circumference = 2 * Math.PI * 44; // r = 44
   const offset = circumference - (score / 100) * circumference;
 
   const colorClass = getScoreColor();
 
   return (
-    <div className="relative w-48 h-48 flex items-center justify-center">
+    <div className="relative w-40 h-40 flex items-center justify-center">
       <svg className="w-full h-full" viewBox="0 0 100 100">
         <circle
           className="text-gray-200"
-          strokeWidth="10"
+          strokeWidth="12"
           stroke="currentColor"
           fill="transparent"
-          r="45"
+          r="44"
           cx="50"
           cy="50"
         />
         <circle
-          className={`${colorClass} transition-all duration-1000 ease-in-out`}
-          strokeWidth="10"
+          className={`${colorClass} transition-all duration-1000 ease-out`}
+          style={{ transitionProperty: 'stroke-dashoffset' }}
+          strokeWidth="12"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
           strokeLinecap="round"
           stroke="currentColor"
           fill="transparent"
-          r="45"
+          r="44"
           cx="50"
           cy="50"
           transform="rotate(-90 50 50)"
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className={`text-5xl font-extrabold ${colorClass}`}>{score}</span>
-        <span className="text-sm font-medium text-gray-500">健康分數</span>
+        <span className={`text-4xl font-bold ${colorClass}`}>{score}</span>
+        <span className="text-xs font-medium text-gray-500 tracking-wide">健康分數</span>
       </div>
     </div>
   );

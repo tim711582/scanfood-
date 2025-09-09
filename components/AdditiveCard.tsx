@@ -5,24 +5,24 @@ interface AdditiveCardProps {
   additive: Additive;
 }
 
-const RiskIcon: React.FC<{ riskLevel: Additive['riskLevel']; className?: string }> = ({ riskLevel, className = "h-5 w-5 mr-1.5" }) => {
+const RiskIcon: React.FC<{ riskLevel: Additive['riskLevel']; className?: string }> = ({ riskLevel, className = "h-5 w-5" }) => {
     switch (riskLevel) {
         case 'Low':
             return (
-                <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                 <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             );
         case 'Medium':
             return (
-                <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
             );
         case 'High':
             return (
-                <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9 4a1 1 0 012 0v8a1 1 0 01-2 0V4zm0 12a1 1 0 112 0 1 1 0 01-2 0z" clipRule="evenodd" />
+                <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             );
         default:
@@ -39,15 +39,14 @@ const RiskBadge: React.FC<{ riskLevel: Additive['riskLevel'] }> = ({ riskLevel }
   };
   
   const riskTranslations: Record<Additive['riskLevel'], string> = {
-    Low: '低',
-    Medium: '中',
-    High: '高',
+    Low: '低風險',
+    Medium: '中風險',
+    High: '高風險',
   };
 
   return (
-    <span className={`inline-flex items-center px-3 py-1 text-sm font-semibold rounded-full ${riskStyles[riskLevel]}`}>
-      <RiskIcon riskLevel={riskLevel} className="h-4 w-4 mr-1.5" />
-      {riskTranslations[riskLevel]} 風險
+    <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full ${riskStyles[riskLevel]}`}>
+      {riskTranslations[riskLevel]}
     </span>
   );
 };
@@ -61,16 +60,19 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
         header: 'bg-emerald-50 hover:bg-emerald-100',
         border: 'border-emerald-200',
         title: 'text-emerald-900',
+        icon: 'text-emerald-500',
     },
     Medium: {
         header: 'bg-yellow-50 hover:bg-yellow-100',
         border: 'border-yellow-200',
         title: 'text-yellow-900',
+        icon: 'text-yellow-500',
     },
     High: {
         header: 'bg-red-50 hover:bg-red-100',
         border: 'border-red-200',
         title: 'text-red-900',
+        icon: 'text-red-500',
     },
   };
 
@@ -92,45 +94,39 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
   return (
     <div className={`border ${currentStyle.border} rounded-lg shadow-sm overflow-hidden`}>
       <button
-        className={`w-full flex justify-between items-center p-4 text-left transition-colors duration-200 ${currentStyle.header}`}
+        className={`w-full flex justify-between items-center p-3 text-left transition-colors duration-200 ${currentStyle.header}`}
         onClick={() => setIsOpen(!isOpen)}
         aria-expanded={isOpen}
         aria-controls={detailsId}
       >
-        <span className={`text-lg font-semibold ${currentStyle.title}`}>{additive.name}</span>
-        <div className='flex items-center space-x-4'>
+        <div className='flex items-center'>
+            <RiskIcon riskLevel={additive.riskLevel} className={`h-6 w-6 mr-3 ${currentStyle.icon}`} />
+            <span className={`text-base font-semibold ${currentStyle.title}`}>{additive.name}</span>
+        </div>
+        <div className='flex items-center space-x-3'>
             <RiskBadge riskLevel={additive.riskLevel} />
             <svg
-                className={`w-6 h-6 text-gray-500 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-                xmlns="http://www.w3.org/2000/svg"
-            >
+                className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
             </svg>
         </div>
       </button>
       {isOpen && (
-        <div id={detailsId} className="px-4 pb-4 pt-4 border-t bg-white space-y-4">
+        <div id={detailsId} className="px-4 pb-4 pt-3 border-t bg-white space-y-3 text-sm">
           <div>
-            <h4 className="font-semibold text-gray-700 text-base mb-1">描述：</h4>
-            <p className="text-gray-600 text-sm">{additive.description}</p>
+            <h4 className="font-semibold text-gray-700 mb-1">描述</h4>
+            <p className="text-gray-600">{additive.description}</p>
           </div>
            <div>
-            <h4 className="font-semibold text-gray-700 text-base mb-1">風險說明：</h4>
-            <p className="text-gray-600 text-sm">{getRiskExplanation(additive.riskLevel)}</p>
+            <h4 className="font-semibold text-gray-700 mb-1">說明</h4>
+            <p className="text-gray-600">{getRiskExplanation(additive.riskLevel)}</p>
           </div>
           <div>
-            <h4 className="font-semibold text-gray-700 text-base mb-1 flex items-center">
-             {additive.riskLevel === 'High' && (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1.5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-             )}
-              潛在危害：
+            <h4 className="font-semibold text-gray-700 mb-1 flex items-center">
+              潛在危害
             </h4>
-            <p className="text-gray-600 text-sm">{additive.potentialHarm}</p>
+            <p className="text-gray-600">{additive.potentialHarm}</p>
           </div>
         </div>
       )}
