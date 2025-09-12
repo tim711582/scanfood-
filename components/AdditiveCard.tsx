@@ -6,10 +6,16 @@ interface AdditiveCardProps {
   additive: Additive;
 }
 
-type RiskLevel = 'Low' | 'Medium' | 'High';
+type RiskLevel = 'Low' | 'Medium' | 'High' | 'Carcinogenic';
 
 const RiskIcon: React.FC<{ riskLevel: RiskLevel; className?: string }> = ({ riskLevel, className = "h-5 w-5" }) => {
     switch (riskLevel) {
+        case 'Carcinogenic': // Fallback icon, but SkullIcon should be used.
+             return (
+                 <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                </svg>
+             )
         case 'Low':
             return (
                  <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -33,45 +39,64 @@ const RiskIcon: React.FC<{ riskLevel: RiskLevel; className?: string }> = ({ risk
     }
 }
 
+const SkullIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 20 20" fill="currentColor">
+      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+      <path d="M10 2a.75.75 0 01.75.75v1.5a.75.75 0 01-1.5 0v-1.5A.75.75 0 0110 2zM5.023 9.21a.75.75 0 01.75-.75h8.454a.75.75 0 010 1.5H5.773a.75.75 0 01-.75-.75zM10 14a1 1 0 01-1-1v-1a1 1 0 112 0v1a1 1 0 01-1 1z" />
+      <path d="M5.138 11.233a.75.75 0 01.53.22l1.9 1.9a.75.75 0 01-1.06 1.06l-1.9-1.9a.75.75 0 01.53-1.28zm9.724 0a.75.75 0 01.53 1.28l-1.9 1.9a.75.75 0 11-1.06-1.06l1.9-1.9a.75.75 0 01.53-.22z" />
+    </svg>
+);
+
+
 export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
   const [isOpen, setIsOpen] = useState(false);
   const detailsId = `additive-details-${additive.name.replace(/\s+/g, '-')}`;
 
   const riskStyles = {
+     Carcinogenic: {
+        header: 'bg-red-700/20 hover:bg-red-700/30',
+        border: 'border-red-700/50',
+        title: 'text-red-900 font-bold',
+        icon: 'text-red-800',
+        badge: 'bg-red-700/20 text-red-900',
+    },
     Low: {
-        header: 'bg-emerald-50 hover:bg-emerald-100',
-        border: 'border-emerald-200',
-        title: 'text-emerald-900',
-        icon: 'text-emerald-500',
-        badge: 'bg-emerald-100 text-emerald-800',
+        header: 'bg-green-500/10 hover:bg-green-500/20',
+        border: 'border-brand-green/30',
+        title: 'text-green-900',
+        icon: 'text-brand-green',
+        badge: 'bg-green-500/20 text-green-800',
     },
     Medium: {
-        header: 'bg-yellow-50 hover:bg-yellow-100',
-        border: 'border-yellow-200',
+        header: 'bg-yellow-500/10 hover:bg-yellow-500/20',
+        border: 'border-brand-yellow/30',
         title: 'text-yellow-900',
-        icon: 'text-yellow-500',
-        badge: 'bg-yellow-100 text-yellow-800',
+        icon: 'text-brand-yellow',
+        badge: 'bg-yellow-500/20 text-yellow-800',
     },
     High: {
-        header: 'bg-red-50 hover:bg-red-100',
-        border: 'border-red-200',
+        header: 'bg-red-500/10 hover:bg-red-500/20',
+        border: 'border-brand-red/30',
         title: 'text-red-900',
-        icon: 'text-red-500',
-        badge: 'bg-red-100 text-red-800',
+        icon: 'text-brand-red',
+        badge: 'bg-red-500/20 text-red-800',
     },
   };
 
-  const getRiskInfo = (category: string): { riskLevel: RiskLevel; style: typeof riskStyles[RiskLevel] } => {
-    const deduction = getDeductionForCategory(category);
+  const getRiskInfo = (additive: Additive): { riskLevel: RiskLevel; style: typeof riskStyles[RiskLevel] } => {
+    if (additive.isCarcinogenic) {
+        return { riskLevel: 'Carcinogenic', style: riskStyles.Carcinogenic };
+    }
+    const deduction = getDeductionForCategory(additive.category);
     if (deduction >= 20) return { riskLevel: 'High', style: riskStyles.High };
     if (deduction >= 10) return { riskLevel: 'Medium', style: riskStyles.Medium };
     return { riskLevel: 'Low', style: riskStyles.Low };
   };
   
-  const { riskLevel, style: currentStyle } = getRiskInfo(additive.category);
+  const { riskLevel, style: currentStyle } = getRiskInfo(additive);
 
   return (
-    <div className={`border ${currentStyle.border} rounded-lg shadow-sm overflow-hidden`}>
+    <div className={`border ${currentStyle.border} rounded-2xl shadow-sm overflow-hidden backdrop-blur-sm`}>
       <button
         className={`w-full flex justify-between items-center p-3 text-left transition-colors duration-200 ${currentStyle.header}`}
         onClick={() => setIsOpen(!isOpen)}
@@ -79,12 +104,15 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
         aria-controls={detailsId}
       >
         <div className='flex items-center'>
-            <RiskIcon riskLevel={riskLevel} className={`h-6 w-6 mr-3 ${currentStyle.icon}`} />
+            {additive.isCarcinogenic 
+                ? <SkullIcon className={`h-6 w-6 mr-3 ${currentStyle.icon}`} /> 
+                : <RiskIcon riskLevel={riskLevel} className={`h-6 w-6 mr-3 ${currentStyle.icon}`} />
+            }
             <span className={`text-base font-semibold ${currentStyle.title}`}>{additive.name}</span>
         </div>
         <div className='flex items-center space-x-3'>
             <span className={`inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full ${currentStyle.badge}`}>
-              {additive.category}
+              {additive.isCarcinogenic ? '潛在致癌物' : additive.category}
             </span>
             <svg
                 className={`w-5 h-5 text-gray-500 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
@@ -94,16 +122,16 @@ export const AdditiveCard: React.FC<AdditiveCardProps> = ({ additive }) => {
         </div>
       </button>
       {isOpen && (
-        <div id={detailsId} className="px-4 pb-4 pt-3 border-t bg-white space-y-3 text-sm">
+        <div id={detailsId} className="px-4 pb-4 pt-3 border-t bg-white/50 space-y-3 text-sm">
           <div>
-            <h4 className="font-semibold text-gray-700 mb-1">描述</h4>
-            <p className="text-gray-600">{additive.description}</p>
+            <h4 className="font-semibold text-brand-text/80 mb-1">描述</h4>
+            <p className="text-brand-subtext">{additive.description}</p>
           </div>
           <div>
-            <h4 className="font-semibold text-gray-700 mb-1 flex items-center">
+            <h4 className="font-semibold text-brand-text/80 mb-1 flex items-center">
               潛在危害
             </h4>
-            <p className="text-gray-600">{additive.potentialHarm}</p>
+            <p className="text-brand-subtext">{additive.potentialHarm}</p>
           </div>
         </div>
       )}

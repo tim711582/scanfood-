@@ -4,6 +4,7 @@ export type Additive = {
   category: string; // e.g., '人工甜味劑', '防腐劑'
   description: string;
   potentialHarm: string;
+  isCarcinogenic: boolean;
 };
 
 export type Beneficial = {
@@ -14,6 +15,7 @@ export type Beneficial = {
 
 export type AnalysisResult = {
   productName: string;
+  productEmoji: string;
   healthScore: number;
   summary: string;
   additives: Additive[];
@@ -21,3 +23,8 @@ export type AnalysisResult = {
 };
 
 export type AppState = 'welcome' | 'loading' | 'results' | 'error';
+
+export type HistoryItem = AnalysisResult & {
+  id: string;
+  timestamp: number;
+};

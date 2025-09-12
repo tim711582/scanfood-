@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { AnalysisResult } from '../types';
+import type { AnalysisResult, Additive } from '../types';
 
 if (!process.env.API_KEY) {
     throw new Error("API_KEY 環境變數未設定。");
@@ -13,6 +13,10 @@ const responseSchema = {
         productName: {
             type: Type.STRING,
             description: "從圖片中識別出的產品完整中文名稱，例如'純濃燕麥'。"
+        },
+        productEmoji: {
+            type: Type.STRING,
+            description: "一個最能代表此產品的 emoji 符號，例如燕麥片是 '🥣' 或 '🌾'。"
         },
         summary: {
             type: Type.STRING,
@@ -39,9 +43,13 @@ const responseSchema = {
                     potentialHarm: {
                         type: Type.STRING,
                         description: "與該添加劑相關的潛在健康危害摘要。"
+                    },
+                    isCarcinogenic: {
+                        type: Type.BOOLEAN,
+                        description: "如果該添加劑被國際癌症研究機構 (IARC) 分類為任何類別的致癌物，或在科學文獻中被廣泛認為具有致癌風險，則設為 true，否則為 false。"
                     }
                 },
-                required: ["name", "category", "description", "potentialHarm"]
+                required: ["name", "category", "description", "potentialHarm", "isCarcinogenic"]
             }
         },
         beneficials: {
@@ -67,7 +75,7 @@ const responseSchema = {
             }
         }
     },
-    required: ["productName", "summary", "additives", "beneficials"]
+    required: ["productName", "productEmoji", "summary", "additives", "beneficials"]
 };
 
 
@@ -77,7 +85,9 @@ const prompt = `您是一位專業的食品添加劑健康風險分析師。請�
 
 1.  **識別產品名稱 (productName)**：從圖片中找出產品的完整中文名稱。
 
-2.  **識別與分類添加劑 (additives)**：仔細閱讀成分列表，識別所有食品添加劑。請根據以下分類標準嚴格對每個添加劑進行分類 (category)：
+2.  **提供代表性 Emoji (productEmoji)**：根據產品名稱，提供一個最能代表該產品的 emoji 符號。
+
+3.  **識別與分類添加劑 (additives)**：仔細閱讀成分列表，識別所有食品添加劑。請根據以下分類標準嚴格對每個添加劑進行分類 (category)：
     *   '人工甜味劑' (例如：阿斯巴甜、糖精、蔗糖素)
     *   '人工色素' (例如：紅色6號、黃色4號、藍色1號)
     *   '防腐劑' (例如：苯甲酸、山梨酸、亞硝酸鹽)
@@ -91,14 +101,18 @@ const prompt = `您是一位專業的食品添加劑健康風險分析師。請�
     *   \`category\`: 上述分類中的一個。
     *   \`description\`: 該添加劑的簡要描述。
     *   \`potentialHarm\`: 該添加劑的潛在危害。
+    *   \`isCarcinogenic\`: 一個布林值。如果該添加劑有潛在的致癌風險（例如，被 IARC 分類，或有相關科學證據），則設為 true。如果沒有已知的致癌風險，則設為 false。請嚴格審查此項。
 
-3.  **識別有益成分 (beneficials)**：找出對健康有益的成分，例如維生素、礦物質、膳食纖維等。
+4.  **識別有益成分 (beneficials)**：找出對健康有益的成分，例如維生素、礦物質、膳食纖維等。
 
-4.  **生成總結 (summary)**：提供一個簡潔的中文總結，概括您發現的主要添加劑類別。
+5.  **生成總結 (summary)**：提供一個簡潔的中文總結，概括您發現的主要添加劑類別。
 
-請僅以嚴格遵守所提供 schema 的有效 JSON 物件回應。您的回應必須包含 \`productName\`、\`summary\`、\`additives\` (即使為空陣列) 和 \`beneficials\` (即使為空陣列) 這些鍵。請勿在 JSON 物件之外包含任何文字、反引號或解釋。請務必以繁體中文回答所有文字內容。`;
+請僅以嚴格遵守所提供 schema 的有效 JSON 物件回應。您的回應必須包含 \`productName\`、\`productEmoji\`、\`summary\`、\`additives\` (即使為空陣列) 和 \`beneficials\` (即使為空陣列) 這些鍵。請勿在 JSON 物件之外包含任何文字、反引號或解釋。請務必以繁體中文回答所有文字內容。`;
 
-export const getDeductionForCategory = (category: string): number => {
+export const getDeductionForCategory = (category: string, isCarcinogenic?: boolean): number => {
+    if (isCarcinogenic) {
+        return 30; // Stricter penalty for carcinogens
+    }
     switch (category) {
         case '人工甜味劑':
             return 20;
@@ -116,15 +130,11 @@ export const getDeductionForCategory = (category: string): number => {
     }
 };
 
-const calculateHealthScore = (additives: AnalysisResult['additives'], beneficials: AnalysisResult['beneficials']): number => {
+const calculateHealthScore = (additives: Additive[]): number => {
     let score = 100;
 
     additives.forEach(additive => {
-        score -= getDeductionForCategory(additive.category);
-    });
-
-    beneficials.forEach(() => {
-        score += 5;
+        score -= getDeductionForCategory(additive.category, additive.isCarcinogenic);
     });
 
     return Math.max(0, Math.min(100, score));
@@ -155,11 +165,11 @@ export const analyzeNutritionLabel = async (imageBase64: string, mimeType: strin
         const jsonText = response.text.trim();
         const apiResult = JSON.parse(jsonText);
 
-        if (!apiResult.productName || !apiResult.summary || !Array.isArray(apiResult.additives) || !Array.isArray(apiResult.beneficials)) {
+        if (!apiResult.productName || !apiResult.productEmoji || !apiResult.summary || !Array.isArray(apiResult.additives) || !Array.isArray(apiResult.beneficials)) {
             throw new Error("來自 API 的回應格式無效。");
         }
         
-        const healthScore = calculateHealthScore(apiResult.additives, apiResult.beneficials);
+        const healthScore = calculateHealthScore(apiResult.additives);
         
         return { ...apiResult, healthScore } as AnalysisResult;
 

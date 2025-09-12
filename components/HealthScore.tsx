@@ -1,27 +1,51 @@
-
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface HealthScoreProps {
   score: number;
 }
 
 export const HealthScore: React.FC<HealthScoreProps> = ({ score }) => {
-  const getScoreColor = () => {
-    if (score >= 75) return 'text-emerald-500';
-    if (score >= 40) return 'text-yellow-500';
-    return 'text-red-500';
+  const [displayScore, setDisplayScore] = useState(0);
+
+  const getScoreColor = (s: number) => {
+    if (s >= 75) return 'text-brand-green';
+    if (s >= 40) return 'text-brand-yellow';
+    return 'text-brand-red';
   };
 
-  const circumference = 2 * Math.PI * 44; // r = 44
-  const offset = circumference - (score / 100) * circumference;
+  useEffect(() => {
+    let animationFrameId: number;
+    const startTime = performance.now();
+    const animationDuration = 1200; // milliseconds
 
-  const colorClass = getScoreColor();
+    const animateScore = (currentTime: number) => {
+      const elapsedTime = currentTime - startTime;
+      const progress = Math.min(elapsedTime / animationDuration, 1);
+      const easedProgress = 1 - Math.pow(1 - progress, 3);
+      const currentAnimatedScore = Math.round(easedProgress * score);
+      setDisplayScore(currentAnimatedScore);
+
+      if (progress < 1) {
+        animationFrameId = requestAnimationFrame(animateScore);
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(animateScore);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [score]);
+
+  const colorClass = getScoreColor(score);
+  const circumference = 2 * Math.PI * 44;
+  const offset = circumference - (displayScore / 100) * circumference;
 
   return (
     <div className="relative w-40 h-40 flex items-center justify-center">
       <svg className="w-full h-full" viewBox="0 0 100 100">
         <circle
-          className="text-gray-200"
+          className="text-slate-500/10"
           strokeWidth="12"
           stroke="currentColor"
           fill="transparent"
@@ -30,8 +54,7 @@ export const HealthScore: React.FC<HealthScoreProps> = ({ score }) => {
           cy="50"
         />
         <circle
-          className={`${colorClass} transition-all duration-1000 ease-out`}
-          style={{ transitionProperty: 'stroke-dashoffset' }}
+          className={colorClass}
           strokeWidth="12"
           strokeDasharray={circumference}
           strokeDashoffset={offset}
@@ -42,11 +65,12 @@ export const HealthScore: React.FC<HealthScoreProps> = ({ score }) => {
           cx="50"
           cy="50"
           transform="rotate(-90 50 50)"
+          style={{ transition: 'stroke-dashoffset 0.5s ease-out' }}
         />
       </svg>
       <div className="absolute flex flex-col items-center">
-        <span className={`text-4xl font-bold ${colorClass}`}>{score}</span>
-        <span className="text-xs font-medium text-gray-500 tracking-wide">健康分數</span>
+        <span className={`text-4xl font-bold ${colorClass}`}>{displayScore}</span>
+        <span className="text-xs font-medium text-brand-subtext tracking-wide">健康分數</span>
       </div>
     </div>
   );

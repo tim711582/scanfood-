@@ -10,14 +10,14 @@ export const BeneficialCard: React.FC<BeneficialCardProps> = ({ beneficial }) =>
   const detailsId = `beneficial-details-${beneficial.name.replace(/\s+/g, '-')}`;
 
   const style = {
-    header: 'bg-green-50 hover:bg-green-100',
-    border: 'border-green-200',
+    header: 'bg-green-500/10 hover:bg-green-500/20',
+    border: 'border-brand-green/30',
     title: 'text-green-900',
-    icon: 'text-green-600',
+    icon: 'text-brand-green',
   };
 
   return (
-    <div className={`border ${style.border} rounded-lg shadow-sm overflow-hidden`}>
+    <div className={`border ${style.border} rounded-2xl shadow-sm overflow-hidden backdrop-blur-sm`}>
       <button
         className={`w-full flex justify-between items-center p-3 text-left transition-colors duration-200 ${style.header}`}
         onClick={() => setIsOpen(!isOpen)}
@@ -37,14 +37,14 @@ export const BeneficialCard: React.FC<BeneficialCardProps> = ({ beneficial }) =>
         </svg>
       </button>
       {isOpen && (
-        <div id={detailsId} className="px-4 pb-4 pt-3 border-t bg-white space-y-3 text-sm">
+        <div id={detailsId} className="px-4 pb-4 pt-3 border-t bg-white/50 space-y-3 text-sm">
           <div>
-            <h4 className="font-semibold text-gray-700 mb-1">描述</h4>
-            <p className="text-gray-600">{beneficial.description}</p>
+            <h4 className="font-semibold text-brand-text/80 mb-1">描述</h4>
+            <p className="text-brand-subtext">{beneficial.description}</p>
           </div>
           <div>
-            <h4 className="font-semibold text-gray-700 mb-1">健康益處</h4>
-            <p className="text-gray-600">{beneficial.benefits}</p>
+            <h4 className="font-semibold text-brand-text/80 mb-1">健康益處</h4>
+            <p className="text-brand-subtext">{beneficial.benefits}</p>
           </div>
         </div>
       )}
